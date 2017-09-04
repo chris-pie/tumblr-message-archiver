@@ -14,7 +14,45 @@
 (function() {
     'use strict';
     var convo_id ="";
-    function save_messages(){}
+    var messages;
+    var done_gathering_messages = false;
+    function get_messages(convo_id)
+    {
+        var waiting = false;
+        var url = "/svc/conversations/messages?conversation_id=446786&participant=kreuz-unlimited.tumblr.com";
+        var repeater;
+        function get_messages_http()
+        {
+            if(waiting) return;
+            waiting = true;
+            GM_xmlhttpRequest({
+                method: "GET",
+                url: "https://www.tumblr.com"+url,
+                headers: {
+                    "Connection": "keep-alive",
+                    "Accept": "application/json, text/javascript, */*; q=0.01",
+                    "X-Requested-With": "XMLHttpRequest",
+                    "Referer": "https://www.tumblr.com/dashboard",
+                    "Accept-Encoding": "gzip, deflate, br",
+                },
+                onload: function(response)
+                {
+                    var parsed_response = JSON.parse(response.responseText);
+                    var messages = parsed_response.response.messages;
+                    waiting = false;
+                    if (parsed_response.response.messages._links === undefined)
+                    {
+                        clearInterval(repeater);
+                        waiting = false;
+                        done_gathering_messages = true;
+                        return;
+                    }
+                    else url = parsed_response.response.messages._links.next.href;
+                }
+            });
+        }
+        repeater = setInterval(get_messages_http, 200);
+    }
     function begin_archiving(tumblog_this, tumblog_remote)
     {
         var waiting = false;
@@ -71,8 +109,8 @@
     repeater = setInterval(function() {
         if (convo_id !== "")
         {
-            save_messages(convo_id);
             clearInterval(repeater);
+            get_messages(convo_id);
         }
     }, 200);
 
