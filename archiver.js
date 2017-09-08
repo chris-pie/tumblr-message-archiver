@@ -1,7 +1,7 @@
 // ==UserScript==
-// @name         Messages Archiver
+// @name         Tumblr Message Archiver
 // @namespace    https://github.com/chris-pie/tumblr-message-archiver
-// @version      0.1
+// @version      1.0
 // @description  Archives the messages
 // @author       Chris Pie
 // @match        https://www.tumblr.com/message_archiver
@@ -30,7 +30,6 @@
     var tumblog_mine = prompt("Enter YOUR blog name (without .tumblr.com)");
     var tumblog_other = prompt("Enter THE OTHER BLOG'S name (without .tumblr.com)");
 
-    debugger;
     var convo_id ="";
     var messages_list = [];
     var done_gathering_messages = false;
