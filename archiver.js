@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Tumblr Message Archiver
 // @namespace    https://github.com/chris-pie/tumblr-message-archiver
-// @version      2.1
+// @version      2.2
 // @description  Archives the messages
 // @author       Chris Pie
 // @match        https://www.tumblr.com/message_archiver
