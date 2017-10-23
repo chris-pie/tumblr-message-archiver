@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Tumblr Message Archiver
 // @namespace    https://github.com/chris-pie/tumblr-message-archiver
-// @version      2.0
+// @version      2.1
 // @description  Archives the messages
 // @author       Chris Pie
 // @match        https://www.tumblr.com/message_archiver
@@ -26,7 +26,7 @@
         return time;
     }
     $("head").text("");
-    $("body").text("").append('<p id="counter"></p>');
+    $("body").text("").append('<p id="error"></p>').append('<p id="counter"></p>');
     var tumblog_mine = prompt("Enter YOUR blog name (without .tumblr.com)");
     var tumblog_other = prompt("Enter THE OTHER BLOG'S name (without .tumblr.com)");
 
@@ -38,11 +38,19 @@
         var waiting = false;
         var url = "/svc/conversations/messages?conversation_id="+convo_id;
         var repeater;
+        var repeat_counter = 0;
         var message_counter = 0;
         function get_messages_http()
         {
-            if(waiting) return;
+            if(waiting && repeat_counter < 300)
+            {
+                if(repeat_counter == 150)
+                    $("#error").text("Tumblr seems to not be responding. Retrying in few seconds. (onrepeat)");
+                repeat_counter++;
+                return;
+            }
             waiting = true;
+            repeat_counter = 0;
             GM_xmlhttpRequest({
                 method: "GET",
                 url: "https://www.tumblr.com"+url,
@@ -55,45 +63,67 @@
                 },
                 onerror: function()
                 {
+                    $("#error").text("Tumblr seems to not be responding. Retrying in few seconds. (onerror)");
                     waiting = false;
                     return;
                 },
+                timeout: 5000,
                 ontimeout: function()
                 {
+                    $("#error").text("Tumblr seems to not be responding. Retrying in few seconds. (ontimeout)");
                     waiting = false;
                     return;
                 },
                 onload: function(response)
                 {
-                    var parsed_response = JSON.parse(response.responseText);
-                    var messages = parsed_response.response.messages;
-                    for (var i = messages.data.length - 1; i>=0;i--)
+                    $("#error").text("");
+                    try
                     {
-                        var currmessage;
-                        if(messages.data[i].type === "TEXT")
+                        if (response.status !== 200)
                         {
-                            // messages_list.unshift(timeConverter(messages.data.ts) + ' ' + messages.data.participant + ': ' + messages.data.message);
-                            currmessage = timeConverter(messages.data[i].ts.substr(0,10)) + ' ' + messages.data[i].participant + ': ' + messages.data[i].message;
+                            waiting = false;
+                            return;
                         }
-                        else if (messages.data[i].type === "POSTREF")
+                        var parsed_response = JSON.parse(response.responseText);
+                        var messages = parsed_response.response.messages;
+                        for (var i = messages.data.length - 1; i>=0;i--)
                         {
-                            //messages_list.unshift(timeConverter(messages.data.ts) + ' ' + messages.data.participant + ': ' + messages.data.post.post_url);
-                            currmessage = timeConverter(messages.data[i].ts.substr(0,10)) + ' ' + messages.data[i].participant + ': ' + messages.data[i].post.post_url;
-
+                            var currmessage;
+                            if(messages.data[i].type === "TEXT")
+                            {
+                                currmessage = timeConverter(messages.data[i].ts.substr(0,10)) + ' ' + messages.data[i].participant + ': ' + messages.data[i].message;
+                            }
+                            else if (messages.data[i].type === "POSTREF")
+                            {
+                                currmessage = timeConverter(messages.data[i].ts.substr(0,10)) + ' ' + messages.data[i].participant + ': ' + messages.data[i].post.post_url;
+                            }
+                            else if (messages.data[i].type === "IMAGE")
+                            {
+                                var image_links = "";
+                                for (var j = 0; j < messages.data[i].images.length; j++)
+                                {
+                                    image_links = image_links + ' ' + messages.data[i].images[j].original_size.url;
+                                }
+                                currmessage = timeConverter(messages.data[i].ts.substr(0,10)) + ' ' + messages.data[i].participant + ': ' + image_links;
+                            }
+                            message_counter++;
+                            $("#counter").text("Gathered " + message_counter + " messages.");
+                            $("#counter").after(currmessage + "<br/>");
                         }
-                        message_counter++;
-                        $("#counter").text("Gathered " + message_counter + " messages.");
-                        $("#counter").after(currmessage + "<br/>");
-                    }
-                    if (parsed_response.response.messages._links === undefined)
-                    {
-                        clearInterval(repeater);
+                        if (parsed_response.response.messages._links === undefined)
+                        {
+                            clearInterval(repeater);
+                            waiting = false;
+                            $("#counter").text($("#counter").text() + " Archiving complete. Press ctrl+a to select all, then ctrl+c to copy. Paste to notepad and save.");
+                            return;
+                        }
+                        else url = parsed_response.response.messages._links.next.href;
                         waiting = false;
-                        $("#counter").text($("#counter").text() + " Archiving complete. Press ctrl+a to select all, then ctrl+c to copy. Paste to notepad and save.");
-                        return;
                     }
-                    else url = parsed_response.response.messages._links.next.href;
-                    waiting = false;
+                    catch(e)
+                    {
+                        $("#error").text(e.name + e.message);
+                    }
                 }
             });
         }
