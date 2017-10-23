@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Tumblr Message Archiver
 // @namespace    https://github.com/chris-pie/tumblr-message-archiver
-// @version      1.0
+// @version      2.0
 // @description  Archives the messages
 // @author       Chris Pie
 // @match        https://www.tumblr.com/message_archiver
@@ -52,6 +52,16 @@
                     "X-Requested-With": "XMLHttpRequest",
                     "Referer": "https://www.tumblr.com/dashboard",
                     "Accept-Encoding": "gzip, deflate, br",
+                },
+                onerror: function()
+                {
+                    waiting = false;
+                    return;
+                },
+                ontimeout: function()
+                {
+                    waiting = false;
+                    return;
                 },
                 onload: function(response)
                 {
